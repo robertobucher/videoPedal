@@ -2,8 +2,8 @@
 
 ## Genesis
 
-This project allows to use a webcam to control a Music application on a tablet (for example MobileSheetsPro) in order to change pages usin facial expressions.
-MusicSheetsPro contains a similar features, but this is not available on tablet like Boxx Max Lumi.
+This project allows to use a webcam to control a Music application on a tablet (for example MobileSheets) in order to change pages usin facial expressions.
+MusicSheets contains a similar features, but this is not available on tablet like my BOOX Max Lumi.
 
 The files run in a Raspberry PI 5
 
@@ -39,6 +39,8 @@ videoData.ped
 ```
 
 To start the application simply move to this folder and run **./startMusic.sh**
+
+At present the application recognize "smile", "mouth open" and "head tilt" (left and right).
 
 
 
