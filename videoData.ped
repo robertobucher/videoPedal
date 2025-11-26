@@ -1,0 +1,7 @@
+{"MOUTH": 0.3, 
+ "SMILE": 0.35, 
+ "TILT": 22,
+ "FIXTIME": 0.5,
+ "TIME_SMILE": 1.0,
+ "TIME_MOUTH": 0.5 
+}
