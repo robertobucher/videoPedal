@@ -42,5 +42,18 @@ To start the application simply move to this folder and run **./startMusic.sh**
 
 At present the application recognize "smile", "mouth open" and "head tilt" (left and right).
 
+It is possible to test the "face" parameters.
 
+Simply open 2 shells.
+In the first shell launch
+```
+./pedal2MusicNoBT.py
+```
+
+and in  the second shell launch
+```
+./video2Pedal.py 1
+```
+
+This allows to get the openCV frame and tune the face parameters in **videoData.ped**.
 
