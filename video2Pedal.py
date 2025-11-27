@@ -7,6 +7,12 @@ import time
 import socket
 import os
 import json
+import sys
+
+DBG = True
+
+if len(sys.argv) < 2:
+    DBG = False
 
 NEUTRAL = 0
 MOUTH_OPEN = 1
@@ -200,9 +206,10 @@ while True:
     else:
         status_text = ''
 
-    #cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    if DBG:
+        cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-    #cv2.imshow('Face Expression Recognition (Dlib)', frame)
+        cv2.imshow('Face Expression Recognition (Dlib)', frame)
 
     # Exit with 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -212,4 +219,5 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
+pedalApp.close()
 
