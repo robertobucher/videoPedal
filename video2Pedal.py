@@ -19,6 +19,7 @@ MOUTH_OPEN = 1
 SMILE = 2
 HEAD_TILT_LEFT = 3
 HEAD_TILT_RIGHT = 4
+KISS = 5
 
 DPAD_UP = '30'
 DPAD_DOWN = '31'
@@ -26,30 +27,37 @@ DPAD_DOWN = '31'
 MAR = 0.30                                 # MOUTH OPEN
 MOUTH_RATIO = 0.35                # SMILE
 HEAD_TILT_THRESHOLD = 30    # pixel di differenza tra mandibole
+KISS_RATIO = 0.15
 
 FIX_TIME = 0.8
+INHIBITION_TIME = 2.0
+TXT_KEY = ['0', DPAD_DOWN, DPAD_UP, DPAD_DOWN, DPAD_UP,  DPAD_DOWN]
 
 prev_status = NEUTRAL
 act_status = NEUTRAL
 status_start_time = time.time()
 action_sent = False
 actionFlag = False
+last_action_time = 0.0
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 # ---------- SMILE and MOUTH OPEN----------
 def calculate_mouth_ratio(landmarks):
-    """Calculate Mouth Aspect Ratio - MAR)."""
+    """Calculate Mouth Aspect Ratio (MAR) e la larghezza esterna della bocca (W_ext)."""
 
-    # Mouth width 60 e 64)
-    A = np.linalg.norm(landmarks[60] - landmarks[64])
+    # Mouth width (prev 60 - 64)
+    # W_ext = np.linalg.norm(landmarks[48] - landmarks[54])
+    W_ext = np.linalg.norm(landmarks[60] - landmarks[64])
 
-    # Mouth height62 e 66)
-    B = np.linalg.norm(landmarks[62] - landmarks[66])
+    # Mouth height 
+    H_int = np.linalg.norm(landmarks[62] - landmarks[66])
 
-    # return Height/Width (B/A)
-    return B / A, A
+    # MAR = Altezza/Larghezza (H_int / W_ext)
+    mar = H_int / W_ext
+
+    return mar, W_ext # Restituiamo W_ext che è la larghezza ora
 
 # ---------- HEAD TILT ----------
 def head_tilt_value(landmarks):
@@ -65,23 +73,27 @@ def update_state(current_status):
     """
     global prev_status, status_start_time, action_sent
 
-    # Se lo stato cambia → reset timer e flag
+    # If state change → reset timer e flag
     if current_status != prev_status:
         prev_status = current_status
         status_start_time = time.time()
         action_sent = False
         return current_status, False
 
-    # Se è lo stesso stato, controlla il tempo
+    # If same state → check time
     elapsed = time.time() - status_start_time
 
-    if elapsed >= FIX_TIME:
-        # Se il tempo è passato ma non abbiamo ancora inviato l'azione
+    if current_status >= 0 and current_status < len(REFTIME):
+        reftime = REFTIME[current_status]
+    else:
+        reftime = FIX_TIME 
+
+    if elapsed >= reftime:
         if not action_sent:
             action_sent = True
-            return current_status, True  # possiamo inviare
+            return current_status, True  
         else:
-            return current_status, False  # già inviato, non ripetere
+            return current_status, False  
 
     return current_status, False
 
@@ -101,34 +113,16 @@ def shape_to_np(shape):
 def capture_state(mar, mouth_width, face_width, tilt):
     if mar > MAR:
         return MOUTH_OPEN
+    elif mouth_width < (face_width * KISS_RATIO): 
+        return KISS 
     elif mouth_width > (face_width * MOUTH_RATIO):
         return SMILE
     elif tilt > HEAD_TILT_THRESHOLD:
-        return HEAD_TILT_LEFT
+        return HEAD_TILT_RIGHT
     elif tilt < -HEAD_TILT_THRESHOLD:
-        return HEAD_TILT_RIGHT       
+        return HEAD_TILT_LEFT
     else:
         return NEUTRAL
-
-def check_time(t, reftime):
-    if time.time()-t >= reftime:
-        return True
-    else:
-        return False
-
-def get_face_state(act_st):
-    global prev_time, old_status
-    if act_st != old_status:
-        prev_time = time.time()
-        prev_status = act_st
-        ok = False
-    else:
-        if check_time(prev_time, REFTIME[act_st]):
-            ok = True
-        else:
-            ok = False
-
-    return act_st, ok
 
 cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
 state = 0
@@ -144,9 +138,18 @@ params = json.loads(msg)
 MAR =  params['MOUTH']                      # MOUTH OPEN
 MOUTH_RATIO = params['SMILE']         # SMILE
 HEAD_TILT_THRESHOLD =  params['TILT']
+KISS_RATIO = params['KISS']
+
 FIX_TIME = params['FIXTIME']
 TIME_SMILE = params['TIME_SMILE']
 TIME_MOUTH = params['TIME_MOUTH']
+TIME_TILT = params['TIME_TILT']
+TIME_KISS = params['TIME_KISS']
+INHIBITION_TIME = params['FREEZE_TIME']
+
+# 30 = NEXT PAGE
+# 31 = PREV PAGE
+TXT_KEY = params['ACTIONS']
 
 # NEUTRAL = 0
 # MOUTH_OPEN = 1
@@ -154,7 +157,7 @@ TIME_MOUTH = params['TIME_MOUTH']
 # HEAD_TILT_LEFT = 3
 # HEAD_TILT_RIGHT = 4
 
-REFTIME = [FIX_TIME, TIME_MOUTH, TIME_SMILE, FIX_TIME, FIX_TIME]
+REFTIME = [FIX_TIME, TIME_MOUTH, TIME_SMILE, TIME_TILT, TIME_TILT, TIME_KISS]
 
 pedalApp = set_client()
 
@@ -185,7 +188,7 @@ while True:
 
         # Head tilt
         tilt = head_tilt_value(landmarks)
-         
+
         # Check Face gesture
         act_status = capture_state(mar, mouth_width, face_width, tilt)
         act_status, actionFlag = update_state(act_status)
@@ -194,15 +197,27 @@ while True:
         for (x, y) in landmarks:
             cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
 
-    TXT_STATUS = ['NEUTRAL', 'MOUTH OPEN', 'SMILE', 'HEAD_TILT_LEFT', 'HEAD_TILT_RIGHt']
-    TXT_KEY = ['0', DPAD_DOWN, DPAD_UP, DPAD_UP, DPAD_DOWN]
+    TXT_STATUS = ['NEUTRAL', 'MOUTH OPEN', 'SMILE',
+                  'HEAD_TILT_LEFT', 'HEAD_TILT_RIGHT', 'KISS']
+    
+    # DPAD_UP = '30'
+    # DPAD_DOWN = '31'
+    # TXT_KEY = ['0', DPAD_DOWN, DPAD_UP, DPAD_DOWN, DPAD_UP]
 
-    if actionFlag:
-        print("Sending:", TXT_STATUS[act_status])
+    current_time = time.time()
+    is_cooldown_active = current_time < last_action_time + INHIBITION_TIME
+
+    if actionFlag and not is_cooldown_active:
         status_text = TXT_STATUS[act_status]
         keyS = TXT_KEY[act_status]
+
         if keyS != '0':
+            print("Sending:", TXT_STATUS[act_status])
             pedalApp.sendall(keyS.encode())
+            last_action_time = current_time # Aggiorna il timestamp dell'ultima azione
+
+    if actionFlag and not is_cooldown_active:
+        status_text = TXT_STATUS[act_status]
     else:
         status_text = ''
 

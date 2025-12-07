@@ -1,7 +1,12 @@
-{"MOUTH": 0.3, 
- "SMILE": 0.35, 
- "TILT": 22,
- "FIXTIME": 0.5,
- "TIME_SMILE": 1.0,
- "TIME_MOUTH": 0.5 
+{"MOUTH": 0.2, 
+ "SMILE": 0.25, 
+ "TILT": 20,
+ "KISS": 0.25,
+ "FIXTIME": 0.8,
+ "TIME_SMILE": 3.0,
+ "TIME_MOUTH": 0.4,
+ "TIME_TILT": 0.4,
+ "TIME_KISS": 0.4,
+ "FREEZE_TIME":2.0,
+ "ACTIONS": ["0", "30", "0", "31", "30", "31"]
 }
