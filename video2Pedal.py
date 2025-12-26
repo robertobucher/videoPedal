@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import cv2
-import dlib
 import numpy as np
 import time
 import socket
@@ -9,94 +8,86 @@ import os
 import json
 import sys
 
+from expression import *
+
+if MP:
+    import mediapipe as mp
+    from mediapipe.tasks import python
+    from mediapipe.tasks.python import vision
+else:
+    import dlib
+
 DBG = True
+SOCK = True
+NEUTRAL = 0
 
 if len(sys.argv) < 2:
     DBG = False
 
-NEUTRAL = 0
-MOUTH_OPEN = 1
-SMILE = 2
-HEAD_TILT_LEFT = 3
-HEAD_TILT_RIGHT = 4
-KISS = 5
+# Debug Mode for local test (comment for real app!))
+# DBG = True
+# SOCK = False
 
-DPAD_UP = '30'
-DPAD_DOWN = '31'
+if MP:
+    outFile = 'videoParams.ped'
+    L_MOUTH = 61      # Left mouth angle
+    R_MOUTH = 291     # Right mouth anle
+    TOP_LIP = 13      # Center mouth up (inner)
+    BOTTOM_LIP = 14      # Center mouth bottom (inner)
+    L_FACE = 234      # Face left
+    R_FACE = 454      # Face right
+    NOSE = 4            # Nose
+else:              #dlib
+    outFile = 'videoData.ped'
+    L_MOUTH = 48      # Left mouth angle
+    R_MOUTH = 54     # Right mouth anle
+    TOP_LIP = 62      # Center mouth up (inner)
+    BOTTOM_LIP = 66      # Center mouth bottom (inner)
+    L_FACE = 0      # Face left
+    R_FACE = 16      # Face right
+    NOSE = 30          # Nose
 
-MAR = 0.30                                 # MOUTH OPEN
-MOUTH_RATIO = 0.35                # SMILE
-HEAD_TILT_THRESHOLD = 30    # pixel di differenza tra mandibole
-KISS_RATIO = 0.15
+if MP:
+    # INIT MEDIAPIPE TASKS
+    model_path = 'face_landmarker_v2_with_blendshapes.task'
 
-FIX_TIME = 0.8
-INHIBITION_TIME = 2.0
-TXT_KEY = ['0', DPAD_DOWN, DPAD_UP, DPAD_DOWN, DPAD_UP,  DPAD_DOWN]
+    base_options = python.BaseOptions(model_asset_path=model_path)
+    options = vision.FaceLandmarkerOptions(
+        base_options=base_options,
+        output_face_blendshapes=False,
+        num_faces=1)
+    detector = vision.FaceLandmarker.create_from_options(options)
+    # Load parameters
+    with open('videoParams.ped', 'r') as f:
+        params = json.load(f)
+else:
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+    # Load parameters
+    with open('videoData.ped', 'r') as f:
+        params = json.load(f)
 
+INHIBITION_TIME = params['FREEZE_TIME']
+
+EVENTS = []
+
+par = params['NEUTRAL']
+EVENTS.append(Expression(NEUTRAL, par))
+
+# Choice of active events
+par = params['MOUTH_OPEN']
+EVENTS.append(mouthOpenExpr(1, par))
+par = params['KISS']
+EVENTS.append(kissExpr(2,par))
+
+# States and events initialization
 prev_status = NEUTRAL
 act_status = NEUTRAL
 status_start_time = time.time()
 action_sent = False
-actionFlag = False
 last_action_time = 0.0
 
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
-# ---------- SMILE and MOUTH OPEN----------
-def calculate_mouth_ratio(landmarks):
-    """Calculate Mouth Aspect Ratio (MAR) e la larghezza esterna della bocca (W_ext)."""
-
-    # Mouth width (prev 60 - 64)
-    # W_ext = np.linalg.norm(landmarks[48] - landmarks[54])
-    W_ext = np.linalg.norm(landmarks[60] - landmarks[64])
-
-    # Mouth height 
-    H_int = np.linalg.norm(landmarks[62] - landmarks[66])
-
-    # MAR = Altezza/Larghezza (H_int / W_ext)
-    mar = H_int / W_ext
-
-    return mar, W_ext # Restituiamo W_ext che è la larghezza ora
-
-# ---------- HEAD TILT ----------
-def head_tilt_value(landmarks):
-    jaw_left_y = landmarks[1][1]
-    jaw_right_y = landmarks[15][1]
-    return jaw_left_y - jaw_right_y  # positivo → inclinato verso sinistra
-
-def update_state(current_status):
-    """
-    Ritorna (status, ready) dove:
-      - status = stato corrente
-      - ready = True se lo stato è stabile da FIX_TIME secondi
-    """
-    global prev_status, status_start_time, action_sent
-
-    # If state change → reset timer e flag
-    if current_status != prev_status:
-        prev_status = current_status
-        status_start_time = time.time()
-        action_sent = False
-        return current_status, False
-
-    # If same state → check time
-    elapsed = time.time() - status_start_time
-
-    if current_status >= 0 and current_status < len(REFTIME):
-        reftime = REFTIME[current_status]
-    else:
-        reftime = FIX_TIME 
-
-    if elapsed >= reftime:
-        if not action_sent:
-            action_sent = True
-            return current_status, True  
-        else:
-            return current_status, False  
-
-    return current_status, False
-
+# Unix Socket Client
 def set_client():
     socket_path = '/tmp/my_socket'
     client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -110,67 +101,63 @@ def shape_to_np(shape):
         coords[i] = (shape.part(i).x, shape.part(i).y)
     return coords
 
-def capture_state(mar, mouth_width, face_width, tilt):
-    if mar > MAR:
-        return MOUTH_OPEN
-    elif mouth_width < (face_width * KISS_RATIO): 
-        return KISS 
-    elif mouth_width > (face_width * MOUTH_RATIO):
-        return SMILE
-    elif tilt > HEAD_TILT_THRESHOLD:
-        return HEAD_TILT_RIGHT
-    elif tilt < -HEAD_TILT_THRESHOLD:
-        return HEAD_TILT_LEFT
-    else:
-        return NEUTRAL
+def capture_state(ev, LM):
+    for el in ev:
+        if el.check(LM):
+            return el.state
+    return NEUTRAL
 
+def update_state(current_status, ev):
+    global prev_status, status_start_time, action_sent
+
+    if current_status != prev_status:
+        prev_status = current_status
+        status_start_time = time.time()
+        action_sent = False
+        return current_status, False
+
+    elapsed = time.time() - status_start_time
+    reftime = ev[current_status].waitTime
+
+    if elapsed >= reftime:
+        if not action_sent:
+            action_sent = True
+            return current_status, True
+    return current_status, False
+
+# Open socket
+if SOCK:
+    pedalApp = set_client()
+
+# Open webcam
 cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
-state = 0
 
 if not cap.isOpened():
     print("Camera not ok")
     exit()
 
-f = open('videoData.ped', 'r')
-msg = f.read()
-f.close()
-params = json.loads(msg)
-MAR =  params['MOUTH']                      # MOUTH OPEN
-MOUTH_RATIO = params['SMILE']         # SMILE
-HEAD_TILT_THRESHOLD =  params['TILT']
-KISS_RATIO = params['KISS']
-
-FIX_TIME = params['FIXTIME']
-TIME_SMILE = params['TIME_SMILE']
-TIME_MOUTH = params['TIME_MOUTH']
-TIME_TILT = params['TIME_TILT']
-TIME_KISS = params['TIME_KISS']
-INHIBITION_TIME = params['FREEZE_TIME']
-
-# 30 = NEXT PAGE
-# 31 = PREV PAGE
-TXT_KEY = params['ACTIONS']
-
-# NEUTRAL = 0
-# MOUTH_OPEN = 1
-# SMILE = 2
-# HEAD_TILT_LEFT = 3
-# HEAD_TILT_RIGHT = 4
-
-REFTIME = [FIX_TIME, TIME_MOUTH, TIME_SMILE, TIME_TILT, TIME_TILT, TIME_KISS]
-
-pedalApp = set_client()
-
 while True:
     ret, frame = cap.read()
-    if not ret:
-        break
+    if not ret: break
+    landmarks = []
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if MP:
+        # Conversion for MediaPipe Tasks
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
-    faces = detector(gray, 0) # 0 allows more speed     # Use this instead for only DLIB
+        # Get landmarks
+        result = detector.detect(mp_image)
 
-    for face in faces:
+        if result.face_landmarks:
+            # Landmarks for 1. face
+            landmarks = result.face_landmarks[0]
+            ok = True
+    else:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = detector(gray, 0) # 0 allows more speed     # Use this instead for only DLIB
+        face = faces[0]
+
         (x1, y1, x2, y2) = (face.left(), face.top(), face.right(), face.bottom())
 
         # Face (disegna il rettangolo usando le coordinate Haar/dlib)
@@ -179,60 +166,50 @@ while True:
         # Get the 68 landmarks (il predictor dlib è ancora necessario!)
         shape = predictor(gray, face)
         landmarks = shape_to_np(shape)
+        ok = True
 
-        # Mouth metrix
-        mar, mouth_width = calculate_mouth_ratio(landmarks)
-
-        # Face
-        face_width = np.linalg.norm(landmarks[0] - landmarks[16])
-
-        # Head tilt
-        tilt = head_tilt_value(landmarks)
-
-        # Check Face gesture
-        act_status = capture_state(mar, mouth_width, face_width, tilt)
-        act_status, actionFlag = update_state(act_status)
-
-        # Plot landmarks
-        for (x, y) in landmarks:
-            cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
-
-    TXT_STATUS = ['NEUTRAL', 'MOUTH OPEN', 'SMILE',
-                  'HEAD_TILT_LEFT', 'HEAD_TILT_RIGHT', 'KISS']
-    
-    # DPAD_UP = '30'
-    # DPAD_DOWN = '31'
-    # TXT_KEY = ['0', DPAD_DOWN, DPAD_UP, DPAD_DOWN, DPAD_UP]
-
-    current_time = time.time()
-    is_cooldown_active = current_time < last_action_time + INHIBITION_TIME
-
-    if actionFlag and not is_cooldown_active:
-        status_text = TXT_STATUS[act_status]
-        keyS = TXT_KEY[act_status]
-
-        if keyS != '0':
-            print("Sending:", TXT_STATUS[act_status])
-            pedalApp.sendall(keyS.encode())
-            last_action_time = current_time # Aggiorna il timestamp dell'ultima azione
-
-    if actionFlag and not is_cooldown_active:
-        status_text = TXT_STATUS[act_status]
-    else:
+    if ok:
+        # Get states
         status_text = ''
+        act_status = capture_state(EVENTS, landmarks)
+        act_status, actionFlag = update_state(act_status, EVENTS)
 
-    if DBG:
-        cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        # Send action to pedal App
+        current_time = time.time()
+        is_cooldown_active = current_time < last_action_time + INHIBITION_TIME
 
-        cv2.imshow('Face Expression Recognition (Dlib)', frame)
+        if actionFlag and not is_cooldown_active:
+            keyS = EVENTS[act_status].command
+            if keyS != '0':
+                print('Sending ' + EVENTS[act_status].text)
+                if SOCK:
+                    pedalApp.sendall(keyS.encode())
+                last_action_time = current_time
 
-    # Exit with 'q'
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        if is_cooldown_active:
+            status_text = 'WAIT ' + EVENTS[act_status].text
+        elif actionFlag:
+            status_text = EVENTS[act_status].text
 
-# Cleanup
+        # Draw Landmark for Debug
+        if DBG:
+            if MP:
+                h, w, _ = frame.shape
+                # Draw only the selected landmarks
+                for idx in [L_MOUTH, R_MOUTH, TOP_LIP, BOTTOM_LIP, L_FACE, R_FACE, NOSE]:
+                    pt = landmarks[idx]
+                    cv2.circle(frame, (int(pt.x * w), int(pt.y * h)), 2, (0, 255, 0), -1)
+            else:
+                # Plot landmarks
+                for (x, y) in landmarks:
+                    cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
+
+            cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            cv2.imshow('Face Expression', frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'): break
+
 cap.release()
 cv2.destroyAllWindows()
-
-pedalApp.close()
-
+if SOCK:
+    pedalApp.close()
