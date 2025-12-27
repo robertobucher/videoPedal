@@ -25,8 +25,8 @@ if len(sys.argv) < 2:
     DBG = False
 
 # Debug Mode for local test (comment for real app!))
-# DBG = True
-# SOCK = False
+DBG = True
+SOCK = False
 
 if MP:
     outFile = 'videoParams.ped'
@@ -36,6 +36,8 @@ if MP:
     BOTTOM_LIP = 14      # Center mouth bottom (inner)
     L_FACE = 234      # Face left
     R_FACE = 454      # Face right
+    L_PUFF = 123      # Left puff
+    R_PUFF = 352      # Right puff
     NOSE = 4            # Nose
 else:              #dlib
     outFile = 'videoData.ped'
@@ -45,6 +47,8 @@ else:              #dlib
     BOTTOM_LIP = 66      # Center mouth bottom (inner)
     L_FACE = 0      # Face left
     R_FACE = 16      # Face right
+    L_PUFF = 123      # Left puff
+    R_PUFF = 352      # Right puff
     NOSE = 30          # Nose
 
 if MP:
@@ -79,6 +83,10 @@ par = params['MOUTH_OPEN']
 EVENTS.append(mouthOpenExpr(1, par))
 par = params['KISS']
 EVENTS.append(kissExpr(2,par))
+# par = params['PUFF_LEFT']
+# EVENTS.append(puffLeftExpr(3,par))
+# par = params['PUFF_RIGHT']
+# EVENTS.append(puffRightExpr(4,par))
 
 # States and events initialization
 prev_status = NEUTRAL
@@ -153,20 +161,26 @@ while True:
             # Landmarks for 1. face
             landmarks = result.face_landmarks[0]
             ok = True
+        else:
+            ok = False
+
     else:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = detector(gray, 0) # 0 allows more speed     # Use this instead for only DLIB
-        face = faces[0]
+        try:
+            face = faces[0]
 
-        (x1, y1, x2, y2) = (face.left(), face.top(), face.right(), face.bottom())
+            (x1, y1, x2, y2) = (face.left(), face.top(), face.right(), face.bottom())
 
-        # Face (disegna il rettangolo usando le coordinate Haar/dlib)
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            # Face (disegna il rettangolo usando le coordinate Haar/dlib)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-        # Get the 68 landmarks (il predictor dlib è ancora necessario!)
-        shape = predictor(gray, face)
-        landmarks = shape_to_np(shape)
-        ok = True
+            # Get the 68 landmarks (il predictor dlib è ancora necessario!)
+            shape = predictor(gray, face)
+            landmarks = shape_to_np(shape)
+            ok = True
+        except:
+            ok = False
 
     if ok:
         # Get states
@@ -196,7 +210,7 @@ while True:
             if MP:
                 h, w, _ = frame.shape
                 # Draw only the selected landmarks
-                for idx in [L_MOUTH, R_MOUTH, TOP_LIP, BOTTOM_LIP, L_FACE, R_FACE, NOSE]:
+                for idx in [L_MOUTH, R_MOUTH, TOP_LIP, BOTTOM_LIP, L_FACE, R_FACE, NOSE, L_PUFF, R_PUFF]:
                     pt = landmarks[idx]
                     cv2.circle(frame, (int(pt.x * w), int(pt.y * h)), 2, (0, 255, 0), -1)
             else:

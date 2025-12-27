@@ -1,6 +1,7 @@
 import json
 
 MP = True       # Mediapipe available
+# Commands   30: prev page  31: next page
 
 if MP:
     outFile = 'videoParams.ped'
@@ -11,6 +12,8 @@ if MP:
     L_FACE = 234      # Face left
     R_FACE = 454      # Face right
     NOSE = 4            # Nose
+    L_PUFF = 123      # Left puff
+    R_PUFF = 352      # Right puff
 else:              #dlib
     outFile = 'videoData.ped'
     L_MOUTH = 48      # Left mouth angle
@@ -20,70 +23,89 @@ else:              #dlib
     L_FACE = 0      # Face left
     R_FACE = 16      # Face right
     NOSE = 30          # Nose
+    L_PUFF = 123      # Left puff
+    R_PUFF = 352      # Right puff
 
 neutral = {
     'TEXT' : 'NEUTRAL',
-    'COMMAND' : '0',
-    'CONDITION' : 0,
+    'COMMAND' : 0,
+    'COND' : 0,
     'WAIT' : 0.4,
-    'LANDMARKS' : []
+    'LANDMARK' : []
 }
 
 smile = {
     'TEXT' : 'SMILE',
-    'COMMAND' : '30',
-    'CONDITION' : 0.25,
+    'COMMAND' : 30,
+    'COND' : 0.25,
     'WAIT' : 0.4,
-    'LANDMARKS' : [L_MOUTH, R_MOUTH, L_FACE, R_FACE]
+    'LANDMARK' : [L_MOUTH, R_MOUTH, L_FACE, R_FACE]
 }
 
 kiss = {
     'TEXT' : 'KISS',
-    'COMMAND' : '30',
-    'CONDITION' : 0.30,
+    'COMMAND' : 30,
+    'COND' : 0.30,
     'WAIT' : 0.4,
-    'LANDMARKS' : [L_MOUTH, R_MOUTH, L_FACE, R_FACE]
+    'LANDMARK' : [L_MOUTH, R_MOUTH, L_FACE, R_FACE]
 }
 
 mouthOpen = {
     'TEXT' : 'MOUTH OPEN',
-    'COMMAND' : '30',
-    'CONDITION' : 0.2,
+    'COMMAND' : 30,
+    'COND' : 0.2,
     'WAIT' : 0.4,
-    'LANDMARKS' : [L_MOUTH, R_MOUTH, TOP_LIP, BOTTOM_LIP]
+    'LANDMARK' : [L_MOUTH, R_MOUTH, TOP_LIP, BOTTOM_LIP]
 }
 
 tiltRight = {
     'TEXT' : 'TILT RIGHT',
-    'COMMAND' : '30',
-    'CONDITION' : 20,
+    'COMMAND' : 30,
+    'COND' : 20,
     'WAIT' : 0.4,
-    'LANDMARKS' : [L_FACE, R_FACE]
+    'LANDMARK' : [L_FACE, R_FACE]
 }
 
 tiltLeft = {
     'TEXT' : 'TILT LEFT',
-    'COMMAND' : '30',
-    'CONDITION' : 20,
+    'COMMAND' : 30,
+    'COND' : 20,
     'WAIT' : 0.4,
-    'LANDMARKS' : [L_FACE, R_FACE]
+    'LANDMARK' : [L_FACE, R_FACE]
 }
 
 tongueRight = {
     'TEXT' : 'TONGUE RIGHT',
-    'COMMAND' : '30',
-    'CONDITION' : 0.02,
+    'COMMAND' : 30,
+    'COND' : 0.02,
     'WAIT' : 0.4,
-    'LANDMARKS' : [NOSE, TOP_LIP, BOTTOM_LIP]
+    'LANDMARK' : [NOSE, TOP_LIP, BOTTOM_LIP]
 }
 
 tongueLeft = {
     'TEXT' : 'TONGUE LEFT',
-    'COMMAND' : '30',
-    'CONDITION' : 0.02,
+    'COMMAND' : 30,
+    'COND' : 0.02,
     'WAIT' : 0.4,
-    'LANDMARKS' : [NOSE, TOP_LIP, BOTTOM_LIP]
+    'LANDMARK' : [NOSE, TOP_LIP, BOTTOM_LIP]
 }
+
+puffLeft = {
+    'TEXT' : 'PUFF LEFT',
+    'COMMAND' : 31,
+    'COND' : 0.15,
+    'WAIT' : 0.4,
+    'LANDMARK' : [NOSE, L_PUFF]
+}
+
+puffRight = {
+    'TEXT' : 'PUFF RIGHT',
+    'COMMAND' : 30,
+    'COND' : 0.15,
+    'WAIT' : 0.4,
+    'LANDMARK' : [NOSE, R_PUFF]
+}
+
 
 ACTIONS = {
     'FREEZE_TIME' : 1.0,
@@ -94,17 +116,15 @@ ACTIONS = {
     'TILT_RIGHT' : tiltRight,
     'TILT_LEFT' : tiltLeft,
     'TONGUE_RIGHT' : tongueRight,
-    'TONGUE_LEFT' : tongueLeft
+    'TONGUE_LEFT' : tongueLeft,
+    'PUFF_LEFT' : puffLeft,
+    'PUFF_RIGHT' : puffRight
 }
 
 msg = json.dumps(ACTIONS)
 f = open(outFile, 'w')
 f.write(msg)
 f.close()
-
-
-
-
 
 
 

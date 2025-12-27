@@ -8,8 +8,8 @@ class Expression():
         self.command = params['COMMAND']
         self.waitTime = params['WAIT']
         self.text = params['TEXT']
-        self.condition = params['CONDITION']
-        self.landmarks = params['LANDMARKS']
+        self.condition = params['COND']
+        self.landmarks = params['LANDMARK']
 
     def check(self, LM):
         return False
@@ -29,66 +29,64 @@ class Expression():
 
 class smileExpr(Expression):
     def check(self, LM):
-        state = False
         w_face = self.dist(LM[self.landmarks[2]], LM[self.landmarks[3]])
         w_mouth = self.dist(LM[self.landmarks[1]],LM[ self.landmarks[0]])
-        if w_mouth > (w_face * self.condition):
-            state = True
+        state = w_mouth > (w_face * self.condition)
         return state
 
 class mouthOpenExpr(Expression):
     def check(self, LM):
-        state = False
         w_mouth = self.dist(LM[self.landmarks[0]], LM[self.landmarks[1]])
         h_mouth = self.dist(LM[self.landmarks[2]], LM[self.landmarks[3]])
         mar = h_mouth / w_mouth if w_mouth != 0 else 0
-        if mar > self.condition:
-            state = True
+        state = mar > self.condition
         return state
 
 class TiltRightExpr(Expression):
     def check(self, LM):
-        state = False
         w_face = self.dist(LM[self.landmarks[2]], LM[self.landmarks[3]])
         w_mouth = self.dist(LM[self.landmarks[1]],LM[ self.landmarks[0]])
-        if w_mouth > (w_face * self.condition):
-            state = True
+        state =  w_mouth > (w_face * self.condition)
         return state
 
 class TiltLeftExpr(Expression):
     def check(self, LM):
-        state = False
         w_face = self.dist(LM[self.landmarks[2]], LM[self.landmarks[3]])
         w_mouth = self.dist(LM[self.landmarks[1]],LM[ self.landmarks[0]])
-        if w_mouth > (w_face * self.condition):
-            state = True
+        state = w_mouth > (w_face * self.condition)
         return state
 
 class kissExpr(Expression):
     def check(self, LM):
-        state = False
         w_face = self.dist(LM[self.landmarks[2]], LM[self.landmarks[3]])
         w_mouth = self.dist(LM[self.landmarks[1]], LM[self.landmarks[0]])
-        if w_mouth < (w_face * self.condition):
-            state = True
+        state =  w_mouth < (w_face * self.condition)
         return state
 
 class tongueRightExpr(Expression):
     def check(self, LM):
-        state = False
         w_face = self.dist(LM[self.landmarks[2]], LM[self.landmarks[3]])
         w_mouth = self.dist(LM[self.landmarks[1]],LM[self.landmarks[0]])
-        if w_mouth > (w_face * self.condition):
-            state = True
+        state = w_mouth > (w_face * self.condition)
         return state
 
 class tongueLeftExpr(Expression):
     def check(self, LM):
-        state = False
         w_face = self.dist(LM[self.landmarks[2]], LM[self.landmarks[3]])
         w_mouth = self.dist(LM[self.landmarks[1]],LM[self.landmarks[0]])
-        if w_mouth > (w_face * self.condition):
-            state = True
+        state = w_mouth > (w_face * self.condition)
+        return state
+
+class puffLeftExpr(Expression):
+    def check(self, LM):
+        w_puff = self.dist(LM[self.landmarks[1]],LM[self.landmarks[0]])
+        state = w_puff > self.condition
+        return state
+
+class puffRightExpr(Expression):
+    def check(self, LM):
+        w_puff = self.dist(LM[self.landmarks[1]],LM[self.landmarks[0]])
+        state = w_puff > self.condition
         return state
 
 
