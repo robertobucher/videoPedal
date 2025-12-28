@@ -1,30 +1,18 @@
 import json
+from expression import *
 
-MP = True       # Mediapipe available
 # Commands   30: prev page  31: next page
 
-if MP:
-    outFile = 'videoParams.ped'
-    L_MOUTH = 61      # Left mouth angle
-    R_MOUTH = 291     # Right mouth anle
-    TOP_LIP = 13      # Center mouth up (inner)
-    BOTTOM_LIP = 14      # Center mouth bottom (inner)
-    L_FACE = 234      # Face left
-    R_FACE = 454      # Face right
-    NOSE = 4            # Nose
-    L_PUFF = 123      # Left puff
-    R_PUFF = 352      # Right puff
-else:              #dlib
-    outFile = 'videoData.ped'
-    L_MOUTH = 48      # Left mouth angle
-    R_MOUTH = 54     # Right mouth anle
-    TOP_LIP = 62      # Center mouth up (inner)
-    BOTTOM_LIP = 66      # Center mouth bottom (inner)
-    L_FACE = 0      # Face left
-    R_FACE = 16      # Face right
-    NOSE = 30          # Nose
-    L_PUFF = 123      # Left puff
-    R_PUFF = 352      # Right puff
+outFile = 'videoParams.ped'
+L_MOUTH = 61      # Left mouth angle
+R_MOUTH = 291     # Right mouth anle
+TOP_LIP = 13      # Center mouth up (inner)
+BOTTOM_LIP = 14      # Center mouth bottom (inner)
+L_FACE = 234      # Face left
+R_FACE = 454      # Face right
+NOSE = 4            # Nose
+L_PUFF = 123      # Left puff
+R_PUFF = 352      # Right puff
 
 neutral = {
     'TEXT' : 'NEUTRAL',
@@ -37,15 +25,15 @@ neutral = {
 smile = {
     'TEXT' : 'SMILE',
     'COMMAND' : 30,
-    'COND' : 0.25,
-    'WAIT' : 0.4,
+    'COND' : 0.35,
+    'WAIT' : 1.0,
     'LANDMARK' : [L_MOUTH, R_MOUTH, L_FACE, R_FACE]
 }
 
 kiss = {
     'TEXT' : 'KISS',
-    'COMMAND' : 30,
-    'COND' : 0.30,
+    'COMMAND' : 31,
+    'COND' : 0.32,
     'WAIT' : 0.4,
     'LANDMARK' : [L_MOUTH, R_MOUTH, L_FACE, R_FACE]
 }
@@ -60,8 +48,8 @@ mouthOpen = {
 
 tiltRight = {
     'TEXT' : 'TILT RIGHT',
-    'COMMAND' : 30,
-    'COND' : 20,
+    'COMMAND' : 31,
+    'COND' : 10,
     'WAIT' : 0.4,
     'LANDMARK' : [L_FACE, R_FACE]
 }
@@ -69,7 +57,7 @@ tiltRight = {
 tiltLeft = {
     'TEXT' : 'TILT LEFT',
     'COMMAND' : 30,
-    'COND' : 20,
+    'COND' : 10,
     'WAIT' : 0.4,
     'LANDMARK' : [L_FACE, R_FACE]
 }
@@ -77,17 +65,17 @@ tiltLeft = {
 tongueRight = {
     'TEXT' : 'TONGUE RIGHT',
     'COMMAND' : 30,
-    'COND' : 0.02,
+    'COND' : 0.04,
     'WAIT' : 0.4,
-    'LANDMARK' : [NOSE, TOP_LIP, BOTTOM_LIP]
+    'LANDMARK' : [NOSE, L_MOUTH, R_MOUTH, L_FACE, R_FACE]
 }
 
 tongueLeft = {
     'TEXT' : 'TONGUE LEFT',
     'COMMAND' : 30,
-    'COND' : 0.02,
+    'COND' : 0.04,
     'WAIT' : 0.4,
-    'LANDMARK' : [NOSE, TOP_LIP, BOTTOM_LIP]
+    'LANDMARK' : [NOSE, L_MOUTH, R_MOUTH, L_FACE, R_FACE]
 }
 
 puffLeft = {
@@ -109,6 +97,7 @@ puffRight = {
 
 ACTIONS = {
     'FREEZE_TIME' : 1.0,
+    'EXPRESSIONS' : ['NEUTRAL', 'MOUTH_OPEN', 'KISS', 'TILT_RIGHT', 'TILT_LEFT'],
     'NEUTRAL' : neutral,
     'SMILE' : smile,
     'KISS' : kiss,
