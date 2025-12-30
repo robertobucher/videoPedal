@@ -21,8 +21,8 @@ if len(sys.argv) < 2:
     DBG = False
 
 # Debug Mode for local test (comment for real app!))
-DBG = True
-SOCK = False
+# DBG = True
+# SOCK = False
 
 outFile = 'videoParams.ped'
 L_MOUTH = 61      # Left mouth angle

@@ -2,18 +2,22 @@
 
 ## Genesis
 
-This project allows to use a webcam to control a Music application on a tablet (for example MobileSheets) in order to change pages usin facial expressions.
+This project allows to use a webcam to control a Music application on a tablet (for example MobileSheets) in order to change pages using facial expressions.
 MusicSheets contains a similar features, but this is not available on tablet like my BOOX Max Lumi.
 
 The files run in a Raspberry PI 5
 
 ## Additional files
-The application is wrizzen in Python and exploits the library DLIB.
+The application is wrizzen in Python and exploits the library MEDIAPIPE
 
 
 ```
-pip install dlib
+pip install mediapipe
 ```
+
+In order to recognize face expressions, the file **face_landmarker_v2_with_blendshapes.task** is required, available at this link. Get this file from Google Face Landmarker Model at
+
+https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/index#models
 
 In addition the btferret git is required to work with bluetooth
 
@@ -24,18 +28,20 @@ python3 btfpymake.py build
 
 to obtain the library **btfpy.so**.
 
-The recognition file **shape_predictor_68_face_landmarks.dat** is available under **https://github.com/davisking/dlib-models.git**
-
 At the end of the installation, the folder should contains these files:
 
 ```
-btfpy.so
-keyboard.txt
+check_expr.py
+createExpr.py
+expression.py
+face_landmarker_v2_with_blendshapes.task
+Makefile
 pedal2Music.py
-shape_predictor_68_face_landmarks.dat
+README.md
 startMusic.sh
 video2Pedal.py
-videoData.ped
+videoParams.ped
+btfpy.so
 ```
 
 To start the application simply move to this folder and run **./startMusic.sh**
@@ -55,5 +61,7 @@ and in  the second shell launch
 ./video2Pedal.py 1
 ```
 
-This allows to get the openCV frame and tune the face parameters in **videoData.ped**.
+**Attention:** Mediapipe is not yet available for Raspberry with python3.13! It is possible to start it using an environment with python3.11!
+
+This allows to get the openCV frame and tune the face parameters in **videoParams.ped**.
 

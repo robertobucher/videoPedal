@@ -48,7 +48,7 @@ mouthOpen = {
 
 tiltRight = {
     'TEXT' : 'TILT RIGHT',
-    'COMMAND' : 31,
+    'COMMAND' : 30,
     'COND' : 10,
     'WAIT' : 0.4,
     'LANDMARK' : [L_FACE, R_FACE]
@@ -56,7 +56,7 @@ tiltRight = {
 
 tiltLeft = {
     'TEXT' : 'TILT LEFT',
-    'COMMAND' : 30,
+    'COMMAND' : 31,
     'COND' : 10,
     'WAIT' : 0.4,
     'LANDMARK' : [L_FACE, R_FACE]

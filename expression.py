@@ -3,7 +3,7 @@ import numpy as np
 class Expression():
     def __init__(self, state, params):
         self.state = state
-        self.command = params['COMMAND']
+        self.command = str(params['COMMAND'])
         self.waitTime = params['WAIT']
         self.text = params['TEXT']
         self.condition = params['COND']
